@@ -17,7 +17,7 @@ class RegisterView(APIView):
 
 class LoginView(APIView):
     def post(self, request):
-        email = request.data['email']
+        email = request.data['username']
         password = request.data['password']
 
         user = User.objects.filter(email=email).first()
@@ -34,7 +34,7 @@ class LoginView(APIView):
             'iat': datetime.datetime.utcnow()
         }
 
-        token = jwt.encode(payload, 'secret', algorithm='HS256').decode('utf-8')
+        token = jwt.encode(payload, 'secret', algorithm='HS256')
 
         response = Response()
 
@@ -71,3 +71,84 @@ class LogoutView(APIView):
             'message': 'success'
         }
         return response
+
+
+
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.exceptions import AuthenticationFailed
+from .models import QuizHistory
+from .serializers import QuizHistorySerializer
+import jwt
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.exceptions import AuthenticationFailed
+from .models import QuizHistory
+from .serializers import QuizHistorySerializer
+import jwt
+
+class QuizHistoryView(APIView):
+    def get(self, request):
+        token = request.COOKIES.get('jwt')
+        
+
+        if not token:
+            raise AuthenticationFailed('Unauthenticated!')
+
+        try:
+            payload = jwt.decode(token, 'secret', algorithms=['HS256'])
+        except jwt.ExpiredSignatureError:
+            raise AuthenticationFailed('Unauthenticated!')
+
+        user_id = payload['id']
+        print(user_id)
+        quiz_histories = QuizHistory.objects.filter(user_id=user_id)
+        serializer = QuizHistorySerializer(quiz_histories, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        token = request.COOKIES.get('jwt')
+        payload = jwt.decode(token, 'secret', algorithms=['HS256'])
+        print("p",payload['id'])
+
+        if not token:
+            raise AuthenticationFailed('Unauthenticated!')
+
+        try:
+            payload = jwt.decode(token, 'secret', algorithms=['HS256'])
+        except jwt.ExpiredSignatureError:
+            raise AuthenticationFailed('Unauthenticated!')
+
+        user_id = payload['id']
+        print(user_id)
+        request.data['user'] = user_id
+        serializer = QuizHistorySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+
+
+
+
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.exceptions import AuthenticationFailed
+from .models import QuizQuestion
+from .serializers import QuizQuestionSerializer
+import jwt
+
+class QuizQuestionListView(APIView):
+    def get(self, request):
+        quiz_questions = QuizQuestion.objects.all()
+        serializer = QuizQuestionSerializer(quiz_questions, many=True)
+        return Response(serializer.data)
+
+class QuizQuestionCreateView(APIView):
+    def post(self, request):
+        serializer = QuizQuestionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
