@@ -202,12 +202,65 @@ from rest_framework.exceptions import AuthenticationFailed
 from .models import QuizQuestion
 from .serializers import QuizQuestionSerializer
 import jwt
+from django.db.models import Q
+
 
 class QuizQuestionListView(APIView):
-    def get(self, request):
-        quiz_questions = QuizQuestion.objects.all()
-        serializer = QuizQuestionSerializer(quiz_questions, many=True)
-        return Response(serializer.data)
+    serializer_class = QuizQuestionSerializer
+
+    def get_queryset(self,request):
+        queryset = QuizQuestion.objects.all()
+
+        # Get parameters from the request, default to None if not provided
+        category = self.request.query_params.get('category', None)
+        num_questions = self.request.query_params.get('num_questions', None)
+        difficulty = self.request.query_params.get('difficulty', None)
+        # user_id = self.request.query_params.get('user_id',None)
+
+        authorization_header = request.headers.get('Authorization')
+
+        if not authorization_header:
+            raise AuthenticationFailed('Authorization header is missing')
+
+        parts = authorization_header.split()
+
+        if len(parts) != 2 or parts[0].lower() != 'bearer':
+            raise AuthenticationFailed('Invalid Authorization header format')
+
+        token = parts[1]
+
+        try:
+            payload = jwt.decode(token, 'secret', algorithms=['HS256'])
+
+            user_id = payload.get('id')
+        except:
+            return Response('Unauthenticated')
+
+
+        if category:
+            queryset = queryset.filter(category=category)
+        if difficulty:
+            queryset = queryset.filter(difficulty=difficulty.lower())
+
+        
+        if user_id:
+            user_history = QuizHistory.objects.filter(user=user_id)
+            attempted_questions_texts = []
+            for history in user_history:
+                for attempted_question in history.attempted_questions:
+                    attempted_questions_texts.append(attempted_question['q_text'])
+
+
+            query = Q()
+            for question_text in attempted_questions_texts:
+                query |= Q(question=question_text)
+            queryset = queryset.exclude(query)
+
+        if num_questions:
+            queryset = queryset[:int(num_questions)]
+        print(queryset)
+
+        return queryset
 
 class QuizQuestionCreateView(APIView):
     def post(self, request):
