@@ -12,7 +12,6 @@ urlpatterns = [
     path('update/',UserProfileUpdate.as_view(),name='Update'),
     path('userprofile/',UserProfileView.as_view(),name='UserProfile'),
     path('questionhistoryget/',QuestionHistoryDetailView.as_view(),name='history'),
-    # path('upload/',PhotoView.as_view(), name="upload_photo"),
 
 
 ]
