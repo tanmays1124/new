@@ -1,9 +1,10 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.exceptions import AuthenticationFailed
-from .serializers import UserSerializer
+from .serializers import UserSerializer, UserUpdateSerializer
 from .models import User
 import jwt, datetime
+from rest_framework import status, generics
 
 
 # Create your views here.
@@ -40,7 +41,8 @@ class LoginView(APIView):
 
         response.set_cookie(key='jwt', value=token, httponly=True)
         response.data = {
-            'jwt': token
+            'jwt': token,
+            'id' : user.id
         }
         return response
 
@@ -48,20 +50,56 @@ class LoginView(APIView):
 class UserView(APIView):
 
     def get(self, request):
-        token = request.COOKIES.get('jwt')
+        authorization_header = request.headers.get('Authorization')
+
+        if not authorization_header:
+            raise AuthenticationFailed('Authorization header is missing')
+
+        parts = authorization_header.split()
+
+        if len(parts) != 2 or parts[0].lower() != 'bearer':
+            raise AuthenticationFailed('Invalid Authorization header format')
+
+        token = parts[1]
+
 
         if not token:
             raise AuthenticationFailed('Unauthenticated!')
 
         try:
-            payload = jwt.decode(token, 'secret', algorithm=['HS256'])
+            payload = jwt.decode(token, 'secret', algorithms=['HS256'])
         except jwt.ExpiredSignatureError:
             raise AuthenticationFailed('Unauthenticated!')
 
         user = User.objects.filter(id=payload['id']).first()
         serializer = UserSerializer(user)
         return Response(serializer.data)
+    
+    def delete(self, request):
+        authorization_header = request.headers.get('Authorization')
 
+        if not authorization_header:
+            raise AuthenticationFailed('Authorization header is missing')
+
+        parts = authorization_header.split()
+
+        if len(parts) != 2 or parts[0].lower() != 'bearer':
+            raise AuthenticationFailed('Invalid Authorization header format')
+
+        token = parts[1]
+
+
+        if not token:
+            raise AuthenticationFailed('Unauthenticated!')
+
+        try:
+            payload = jwt.decode(token, 'secret', algorithms=['HS256'])
+        except jwt.ExpiredSignatureError:
+            raise AuthenticationFailed('Unauthenticated!')
+
+        user = User.objects.filter(id=payload['id']).first()
+        user.delete()
+        return Response({"Success":"User Deleted Successfully"})
 
 class LogoutView(APIView):
     def post(self, request):
@@ -90,7 +128,18 @@ import jwt
 
 class QuizHistoryView(APIView):
     def get(self, request):
-        token = request.COOKIES.get('jwt')
+        authorization_header = request.headers.get('Authorization')
+
+        if not authorization_header:
+            raise AuthenticationFailed('Authorization header is missing')
+
+        parts = authorization_header.split()
+
+        if len(parts) != 2 or parts[0].lower() != 'bearer':
+            raise AuthenticationFailed('Invalid Authorization header format')
+
+        token = parts[1]
+
         
 
         if not token:
@@ -107,26 +156,40 @@ class QuizHistoryView(APIView):
         serializer = QuizHistorySerializer(quiz_histories, many=True)
         return Response(serializer.data)
 
-    def post(self, request):
-        token = request.COOKIES.get('jwt')
-        payload = jwt.decode(token, 'secret', algorithms=['HS256'])
-        print("p",payload['id'])
 
-        if not token:
-            raise AuthenticationFailed('Unauthenticated!')
+
+    def post(self, request):
+        authorization_header = request.headers.get('Authorization')
+
+        if not authorization_header:
+            raise AuthenticationFailed('Authorization header is missing')
+
+        parts = authorization_header.split()
+
+        if len(parts) != 2 or parts[0].lower() != 'bearer':
+            raise AuthenticationFailed('Invalid Authorization header format')
+
+        token = parts[1]
 
         try:
             payload = jwt.decode(token, 'secret', algorithms=['HS256'])
-        except jwt.ExpiredSignatureError:
-            raise AuthenticationFailed('Unauthenticated!')
 
-        user_id = payload['id']
-        print(user_id)
-        request.data['user'] = user_id
-        serializer = QuizHistorySerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
+            user_id = payload.get('id')
+
+            print(user_id)
+            request.data['user'] = user_id
+            print(request.data)
+            serializer = QuizHistorySerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
+
+            # Perform further processing here...
+
+        except jwt.ExpiredSignatureError:
+            raise AuthenticationFailed('Token has expired')
+        except jwt.InvalidTokenError:
+            raise AuthenticationFailed('Invalid token')
 
 
 
@@ -152,3 +215,117 @@ class QuizQuestionCreateView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+
+
+
+
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from .serializers import UserSerializer
+
+class UserProfileUpdate(APIView):
+
+    def put(self, request):
+        authorization_header = request.headers.get('Authorization')
+
+        if not authorization_header:
+            raise AuthenticationFailed('Authorization header is missing')
+
+        parts = authorization_header.split()
+
+        if len(parts) != 2 or parts[0].lower() != 'bearer':
+            raise AuthenticationFailed('Invalid Authorization header format')
+
+        token = parts[1]
+        try:
+            payload = jwt.decode(token, 'secret', algorithms=['HS256'])
+
+            user_id = payload.get('id')
+
+            user = User.objects.filter(id=user_id).first()
+        except:
+            return Response('Unauthenticated')
+        serializer = UserUpdateSerializer(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)
+
+
+
+
+class QuestionHistoryDetailView(generics.ListAPIView):
+    serializer_class = QuizHistorySerializer
+
+    def get_queryset(self):
+        queryset = QuizHistory.objects.all()
+
+        # Get parameters from the request, default to None if not provided
+        user_id = self.request.query_params.get('user_id', None)
+        difficulty_level = self.request.query_params.get('difficulty_level', None)
+        domain = self.request.query_params.get('domain', None)
+        # user_id = self.request.query_params.get('user_id', None)
+
+
+        # Apply filters based on parameters
+        if user_id:
+            queryset = queryset.filter(user=user_id)
+        if user_id:
+            queryset = queryset.filter(difficulty_level=difficulty_level)
+        if user_id:
+            queryset = queryset.filter(doamin=domain)
+
+        print(queryset)
+
+        return queryset
+    
+
+class UserProfileView(generics.ListAPIView):
+    serializer_class = UserSerializer
+
+    def get_queryset(self):
+        queryset = User.objects.all()
+
+        user_id = self.request.query_params.get('user_id', None)
+        if user_id:
+            queryset = queryset.filter(id=user_id)
+        print(queryset)
+
+        return queryset
+    
+
+
+
+from rest_framework.decorators import api_view
+
+class PhotoView:
+
+    def put(request):
+        authorization_header = request.headers.get('Authorization')
+
+        if not authorization_header:
+            raise AuthenticationFailed('Authorization header is missing')
+
+        parts = authorization_header.split()
+
+        if len(parts) != 2 or parts[0].lower() != 'bearer':
+            raise AuthenticationFailed('Invalid Authorization header format')
+
+        token = parts[1]
+        try:
+            payload = jwt.decode(token, 'secret', algorithms=['HS256'])
+
+            user_id = payload.get('id')
+
+            user = User.objects.filter(id=user_id).first()
+        except:
+            return Response('Unauthenticated')
+        
+        serializer = UserUpdateSerializer(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)

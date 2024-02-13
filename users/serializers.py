@@ -5,7 +5,7 @@ from .models import User
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'first_name', 'last_name', 'email','username', 'password']
+        fields = ['id', 'first_name', 'last_name', 'email','username', 'password','photo']
         extra_kwargs = {
             'password': {'write_only': True}
         }
@@ -20,6 +20,11 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 
+class UserUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email','photo']
+
 
 
 from rest_framework import serializers
@@ -28,7 +33,7 @@ from .models import QuizHistory
 class QuizHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = QuizHistory
-        fields = ['id', 'domain', 'difficulty_level', 'score', 'attempted_questions', 'submission_time']
+        fields = ['id', 'user', 'domain', 'difficulty_level', 'score', 'attempted_questions', 'submission_time']
 
 
 from rest_framework import serializers
