@@ -215,29 +215,30 @@ class QuizQuestionListView(generics.ListAPIView):
 
     def get_queryset(self):
         queryset = QuizQuestion.objects.all()
-
-        # Get parameters from the request, default to None if not provided
+        print(self.request.headers)
         category = self.request.query_params.get('category', None)
         num_questions = self.request.query_params.get('num_questions', None)
         difficulty = self.request.query_params.get('difficulty', None)
-        # user_id = self.request.query_params.get('user_id',None)
-
+        
         authorization_header = self.request.headers.get('Authorization')
+        print('hi',authorization_header)
 
         if not authorization_header:
             raise AuthenticationFailed('Authorization header is missing')
-
+        
         parts = authorization_header.split()
 
         if len(parts) != 2 or parts[0].lower() != 'bearer':
             raise AuthenticationFailed('Invalid Authorization header format')
 
         token = parts[1]
+        print(token)
 
         try:
             payload = jwt.decode(token, 'secret', algorithms=['HS256'])
 
             user_id = payload.get('id')
+            print(user_id)
         except:
             return Response('Unauthenticated')
 
