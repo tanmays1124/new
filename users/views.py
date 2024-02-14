@@ -1,3 +1,5 @@
+from django.http import JsonResponse
+from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.exceptions import AuthenticationFailed
@@ -18,10 +20,13 @@ class RegisterView(APIView):
 
 class LoginView(APIView):
     def post(self, request):
-        email = request.data['username']
+        data = request.data['username']
         password = request.data['password']
 
-        user = User.objects.filter(email=email).first()
+        if '@' in data:
+            user = User.objects.filter(email=data).first()
+        else:
+            user = User.objects.filter(username=data).first()
 
         if user is None:
             raise AuthenticationFailed('User not found!')
@@ -205,10 +210,10 @@ import jwt
 from django.db.models import Q
 
 
-class QuizQuestionListView(APIView):
+class QuizQuestionListView(generics.ListAPIView):
     serializer_class = QuizQuestionSerializer
 
-    def get_queryset(self,request):
+    def get_queryset(self):
         queryset = QuizQuestion.objects.all()
 
         # Get parameters from the request, default to None if not provided
@@ -217,7 +222,7 @@ class QuizQuestionListView(APIView):
         difficulty = self.request.query_params.get('difficulty', None)
         # user_id = self.request.query_params.get('user_id',None)
 
-        authorization_header = request.headers.get('Authorization')
+        authorization_header = self.request.headers.get('Authorization')
 
         if not authorization_header:
             raise AuthenticationFailed('Authorization header is missing')
@@ -382,3 +387,77 @@ class PhotoView:
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=400)
+
+
+
+
+from django.utils.http import  urlsafe_base64_decode
+from django.core.mail import send_mail
+from django.urls import reverse
+import base64
+from django.shortcuts import get_object_or_404
+from django.contrib.auth.tokens import default_token_generator
+from django.views.decorators.csrf import csrf_exempt
+
+
+
+import users.ip as ip
+@csrf_exempt
+def forgot_password(request):
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        user = get_object_or_404(User, email=email)
+        token = default_token_generator.make_token(user)
+        uid_bytes = str(user.pk).encode('utf-8')
+        uid = base64.urlsafe_b64encode(uid_bytes).decode('utf-8')
+        print(user.pk,uid)
+
+        reset_link = request.build_absolute_uri(
+            reverse('reset_password') + f'?uid={uid}&token={token}'
+        )
+        send_mail(
+            'Reset Your Password',
+            f'Click the following link to reset your password: {reset_link}',
+            'from@example.com',
+            [email],
+            fail_silently=False,
+        )
+        return render(request, 'mail_sent.html',{'email':email,'ip':ip.ip})
+    elif request.method == 'GET':
+        # Handle GET request if needed, for example, you can render a form to collect email
+        return render(request, 'get_email.html')
+
+    else:
+        return JsonResponse({'error': 'Invalid request method.'}, status=400)
+
+
+
+
+@csrf_exempt
+def reset_password(request):
+    if request.method == 'POST':
+        print(request.GET)
+
+        uid = request.POST.get('uid')
+        token = request.POST.get('token')
+        print("a",uid,token)
+
+        user_id = urlsafe_base64_decode(uid).decode('utf-8')
+        user = User.objects.get(id=user_id)
+        if default_token_generator.check_token(user, token):
+            new_password = request.POST.get('new_password')
+            user.set_password(new_password)
+            user.save()
+            return render(request, 'success.html',{'ip':ip.ip})
+
+        else:
+            return JsonResponse({'error': 'Invalid or expired reset token.'}, status=400)
+    elif request.method == 'GET':
+        print(request.GET)
+        # Handle GET request if needed, for example, you can render a form to reset password
+        uid = request.GET['uid']
+        token = request.GET['token']
+        return render(request, 'new.html',{"uid":uid,"token":token})
+
+    else:
+        return JsonResponse({'error': 'Invalid request method.'}, status=400)

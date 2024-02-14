@@ -61,14 +61,14 @@ ROOT_URLCONF = 'auth.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+                'django.contrib.messages.context_processors.messages',  # Ensure this line is present
             ],
         },
     },
@@ -80,10 +80,15 @@ WSGI_APPLICATION = 'auth.wsgi.application'
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
 
 DATABASES = {
-    'default': {
+    'default':{
         'ENGINE': 'djongo',
-        'NAME': 'testing',
-
+        'NAME': 'quiz',
+        "CLIENT": {
+        'host': 'mongodb+srv://admin:admin@cluster0.znbofaq.mongodb.net/',
+        'username': 'admin',
+        'password': 'admin',
+       
+        }
     }
 }
 
@@ -148,20 +153,11 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000', # Replace with the origin of your React app
 ]
-import os
 
-TEMPLATES = [
-    {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates')],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',  # Ensure this line is present
-            ],
-        },
-    },
-]
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'sampleuser788@gmail.com'
+EMAIL_HOST_PASSWORD = 'vcdl vzmt ulbe hobq'
