@@ -399,6 +399,7 @@ import base64
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.tokens import default_token_generator
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib import messages
 
 
 
@@ -407,7 +408,15 @@ import users.ip as ip
 def forgot_password(request):
     if request.method == 'POST':
         email = request.POST.get('email')
-        user = get_object_or_404(User, email=email)
+        print(email)
+        try:
+            print("a")
+            user = User.objects.get(email=email)
+            print("aa")
+        except User.DoesNotExist:
+            messages.error(request, "User with this email address does not exist.")
+            return render(request, 'get_email.html')
+
         token = default_token_generator.make_token(user)
         uid_bytes = str(user.pk).encode('utf-8')
         uid = base64.urlsafe_b64encode(uid_bytes).decode('utf-8')
@@ -425,6 +434,7 @@ def forgot_password(request):
         )
         return render(request, 'mail_sent.html',{'email':email,'ip':ip.ip})
     elif request.method == 'GET':
+        print("haha")
         # Handle GET request if needed, for example, you can render a form to collect email
         return render(request, 'get_email.html')
 
@@ -442,6 +452,12 @@ def reset_password(request):
         uid = request.POST.get('uid')
         token = request.POST.get('token')
         print("a",uid,token)
+        pass1 = request.POST.get('new_password')
+        pass2 = request.POST.get('confirm_password')
+
+        if pass1!=pass2:
+            messages.error(request,"Password doesn't match")
+            return render(request, 'new.html',{"uid":uid,"token":token})
 
         user_id = urlsafe_base64_decode(uid).decode('utf-8')
         user = User.objects.get(id=user_id)

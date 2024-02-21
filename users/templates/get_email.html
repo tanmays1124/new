@@ -46,10 +46,26 @@
         button:hover {
             background-color: #0056b3;
         }
+        .error{
+            color: red;
+        }
+        .messages{
+            position: absolute;
+            margin-top: -50%;
+        }
     </style>
 </head>
 <body>
+    {% if messages %}
+    <ul class="messages">
+        {% for message in messages %}
+            <div class='error'>{{ message }}</div>
+        {% endfor %}
+    </ul>
+{% endif %}
+
     <div class="prompt-container">
+
         <h1>Forgot Your Password?</h1>
         <p>No worries! Enter your email address below, and we'll send you a link to reset your password.</p>
         <form action="{% url 'forgot_password' %}" method="post">
