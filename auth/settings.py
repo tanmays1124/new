@@ -152,7 +152,8 @@ REST_FRAMEWORK = {
 
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000', 
-    'http://52.207.36.160:3000'# Replace with the origin of your React app
+    'http://52.207.36.160:3000',
+    'http://13.233.229.225:3000'# Replace with the origin of your React app
 ]
 
 
