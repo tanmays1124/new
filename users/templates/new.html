@@ -54,13 +54,20 @@
         button:hover {
             background-color: #0056b3;
         }
+        .error{
+            color: red;
+        }
+        .messages{
+            position: absolute;
+            margin-top: -50%;
+        }
     </style>
 </head>
 <body>
     {% if messages %}
     <ul class="messages">
         {% for message in messages %}
-            <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+            <li class="error">{{ message }}</li>
         {% endfor %}
     </ul>
 {% endif %}

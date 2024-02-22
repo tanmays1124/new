@@ -400,7 +400,24 @@ from django.shortcuts import get_object_or_404
 from django.contrib.auth.tokens import default_token_generator
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
+import re
 
+
+
+def check_string(input_string):
+    has_uppercase = False
+    has_lowercase = False
+    has_number = False
+
+    for char in input_string:
+        if char.isupper():
+            has_uppercase = True
+        elif char.islower():
+            has_lowercase = True
+        elif char.isdigit():
+            has_number = True
+
+    return has_uppercase and has_lowercase and has_number
 
 
 import users.ip as ip
@@ -455,6 +472,17 @@ def reset_password(request):
         pass1 = request.POST.get('new_password')
         pass2 = request.POST.get('confirm_password')
 
+        if len(pass1)<8:
+            messages.error(request,"Password length should be graeter than 8")
+            return render(request, 'new.html',{"uid":uid,"token":token})
+
+
+        if not check_string(pass1):
+            messages.error(request,"Password should have UpperCase , Lowercase , Numbers")
+            return render(request, 'new.html',{"uid":uid,"token":token})
+
+
+    
         if pass1!=pass2:
             messages.error(request,"Password doesn't match")
             return render(request, 'new.html',{"uid":uid,"token":token})
