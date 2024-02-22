@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/3.1/ref/settings/
 
 from pathlib import Path
 import os
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 
 
@@ -84,9 +85,9 @@ DATABASES = {
         'ENGINE': 'djongo',
         'NAME': 'quiz',
         "CLIENT": {
-        'host': 'mongodb+srv://admin:admin@cluster0.znbofaq.mongodb.net/',
-        'username': 'admin',
-        'password': 'admin',
+        'host': 'mongodb://admin:admin_password@13.126.139.114:27017/',
+        # 'username': 'admin',
+        # 'password': 'admin',
        
         }
     }
